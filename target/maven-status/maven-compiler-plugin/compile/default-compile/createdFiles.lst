@@ -1,0 +1,16 @@
+com\nutritrack\config\WebConfig.class
+com\nutritrack\model\User.class
+com\nutritrack\service\UserService.class
+com\nutritrack\controller\AuthController.class
+com\nutritrack\repository\FoodItemRepository.class
+com\nutritrack\repository\UserRepository.class
+com\nutritrack\config\DataInitializer.class
+com\nutritrack\controller\MealController.class
+com\nutritrack\controller\ProfileController.class
+com\nutritrack\NutriTrackApplication.class
+com\nutritrack\model\MealEntry.class
+com\nutritrack\service\MealService.class
+com\nutritrack\service\GeminiService.class
+com\nutritrack\repository\MealEntryRepository.class
+com\nutritrack\controller\PageController.class
+com\nutritrack\model\FoodItem.class

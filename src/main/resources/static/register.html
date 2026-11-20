@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Register</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+    .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .act-btn {
+      padding: 8px 10px; border: 2px solid var(--border); border-radius: 8px;
+      background: white; cursor: pointer; font-family: var(--font-body);
+      font-size: 0.82rem; font-weight: 500; color: var(--muted);
+      transition: all 0.2s; text-align: center;
+    }
+    .act-btn.selected { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+    .auth-card { max-width: 520px; }
+  </style>
+</head>
+<body>
+<div class="auth-wrapper">
+  <div class="auth-card">
+    <div class="auth-logo">Nutri<span>Track</span></div>
+    <p class="auth-sub">Create your health profile 💪</p>
+
+    <div id="msg"></div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Full Name</label>
+        <input class="form-input" id="name" type="text" placeholder="Arjun Kumar"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Username</label>
+        <input class="form-input" id="username" type="text" placeholder="arjun_k"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="password" type="password" placeholder="Choose a strong password"/>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Age</label>
+        <input class="form-input" id="age" type="number" placeholder="25" min="1" max="120"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Gender</label>
+        <select class="form-select" id="gender">
+          <option value="">Select...</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Height (meters)</label>
+        <input class="form-input" id="height" type="number" step="0.01" placeholder="1.72"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight (kg)</label>
+        <input class="form-input" id="weight" type="number" step="0.1" placeholder="65"/>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">Activity Level</label>
+      <div class="activity-grid">
+        <button class="act-btn" data-val="1.2" onclick="selectActivity(this)">🛋️ Sedentary</button>
+        <button class="act-btn" data-val="1.375" onclick="selectActivity(this)">🚶 Lightly Active</button>
+        <button class="act-btn" data-val="1.55" onclick="selectActivity(this)">🏃 Moderately Active</button>
+        <button class="act-btn" data-val="1.725" onclick="selectActivity(this)">💪 Very Active</button>
+        <button class="act-btn" style="grid-column:1/-1;" data-val="1.9" onclick="selectActivity(this)">🏋️ Extra Active</button>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" onclick="doRegister()">
+      Create Account →
+    </button>
+
+    <div class="auth-footer">
+      Already have an account? <a href="/login">Login here</a>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  let selectedMultiplier = 1.2;
+
+  function selectActivity(btn) {
+    document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedMultiplier = parseFloat(btn.dataset.val);
+  }
+
+  async function doRegister() {
+    const name = document.getElementById('name').value.trim();
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+    const age = parseInt(document.getElementById('age').value);
+    const gender = document.getElementById('gender').value;
+    const height = parseFloat(document.getElementById('height').value);
+    const weight = parseFloat(document.getElementById('weight').value);
+    const msg = document.getElementById('msg');
+
+    if (!name || !username || !password || !age || !gender || !height || !weight) {
+      msg.innerHTML = '<div class="alert alert-error">Please fill in all fields.</div>';
+      return;
+    }
+
+    const res = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, username, password, age, gender, height, weight, activityMultiplier: selectedMultiplier })
+    });
+    const text = await res.text();
+    if (text === 'ok') {
+      msg.innerHTML = '<div class="alert alert-success">Account created! Redirecting to login...</div>';
+      setTimeout(() => window.location.href = '/login', 1200);
+    } else {
+      msg.innerHTML = `<div class="alert alert-error">${text}</div>`;
+    }
+  }
+</script>
+</body>
+</html>

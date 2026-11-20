@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – BMI</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .bmi-display {
+      text-align: center;
+      padding: 2rem;
+      border-radius: var(--radius);
+      background: var(--green-light);
+      margin-bottom: 1.5rem;
+    }
+    .bmi-number {
+      font-family: var(--font-head);
+      font-size: 4rem;
+      font-weight: 800;
+      line-height: 1;
+    }
+    .bmi-cat {
+      font-size: 1.2rem;
+      font-weight: 600;
+      margin-top: 0.5rem;
+    }
+    .bmi-scale {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin: 1rem 0;
+    }
+    .bmi-scale-item {
+      padding: 10px 8px;
+      border-radius: 10px;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 600;
+      opacity: 0.5;
+      transition: opacity 0.3s;
+    }
+    .bmi-scale-item.active { opacity: 1; transform: scale(1.05); }
+    .range-underweight { background: #dbeafe; color: #1d4ed8; }
+    .range-normal { background: var(--green-light); color: var(--green-dark); }
+    .range-overweight { background: #fef9c3; color: #92400e; }
+    .range-obese { background: var(--red-light); color: var(--red); }
+    .tip-row { display: flex; gap: 8px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 0.9rem; }
+    .tip-row:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-title" style="margin-bottom:1.5rem">⚖️ BMI Calculator</div>
+
+  <div class="grid-2">
+    <!-- Your BMI from profile -->
+    <div>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">📊 Your Current BMI</div>
+        <div class="bmi-display" id="profile-bmi-display">
+          <div class="bmi-number" id="profile-bmi-num">–</div>
+          <div class="bmi-cat" id="profile-bmi-cat">Loading...</div>
+          <div style="font-size:0.85rem;color:var(--muted);margin-top:0.5rem" id="profile-bmi-info"></div>
+        </div>
+        <div class="bmi-scale">
+          <div class="bmi-scale-item range-underweight" id="scale-uw">Underweight<br/>&lt; 18.5</div>
+          <div class="bmi-scale-item range-normal" id="scale-nm">Normal<br/>18.5–24.9</div>
+          <div class="bmi-scale-item range-ow" id="scale-ow" style="background:#fef9c3;color:#92400e">Overweight<br/>25–29.9</div>
+          <div class="bmi-scale-item range-obese" id="scale-ob">Obese<br/>&ge; 30</div>
+        </div>
+      </div>
+
+      <!-- Health tips -->
+      <div class="card">
+        <div class="card-title">💡 Health Tips</div>
+        <div id="health-tips">
+          <div class="tip-row"><span>🥗</span><span>Eat plenty of vegetables and whole grains daily.</span></div>
+          <div class="tip-row"><span>💧</span><span>Drink at least 8 glasses of water every day.</span></div>
+          <div class="tip-row"><span>🚶</span><span>Walk at least 30 minutes per day for overall fitness.</span></div>
+          <div class="tip-row"><span>😴</span><span>Get 7–9 hours of quality sleep each night.</span></div>
+          <div class="tip-row"><span>🍎</span><span>Eat 3 balanced meals and avoid skipping breakfast.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Manual calculator -->
+    <div class="card">
+      <div class="card-title">🧮 BMI Calculator</div>
+      <p style="font-size:0.88rem;color:var(--muted);margin-bottom:1.2rem">Check BMI for any values</p>
+
+      <div class="form-group">
+        <label class="form-label">Height (meters)</label>
+        <input class="form-input" id="calc-height" type="number" step="0.01" placeholder="1.72"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Weight (kg)</label>
+        <input class="form-input" id="calc-weight" type="number" step="0.1" placeholder="65"/>
+      </div>
+
+      <button class="btn btn-primary" style="width:100%" onclick="calculateBMI()">Calculate BMI</button>
+
+      <div id="calc-result" style="display:none;margin-top:1.5rem">
+        <div class="bmi-display">
+          <div class="bmi-number" id="calc-bmi-num">–</div>
+          <div class="bmi-cat" id="calc-bmi-cat">–</div>
+        </div>
+        <div class="bmi-scale">
+          <div class="bmi-scale-item range-underweight" id="c-scale-uw">Underweight<br/>&lt;18.5</div>
+          <div class="bmi-scale-item range-normal" id="c-scale-nm">Normal<br/>18.5–24.9</div>
+          <div class="bmi-scale-item" style="background:#fef9c3;color:#92400e" id="c-scale-ow">Overweight<br/>25–29.9</div>
+          <div class="bmi-scale-item range-obese" id="c-scale-ob">Obese<br/>&ge;30</div>
+        </div>
+        <div id="calc-advice" class="alert" style="margin-top:0.5rem"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  async function init() {
+    const user = await checkAuth();
+    if (!user) return;
+    setActiveNav();
+
+    const bmi = user.calculateBMI || (() => {
+      const h = user.height;
+      return Math.round((user.weight / (h * h)) * 100) / 100;
+    })();
+
+    const calcBMI = Math.round((user.weight / (user.height * user.height)) * 100) / 100;
+    const cat = getBMICategory(calcBMI);
+
+    const display = document.getElementById('profile-bmi-display');
+    display.style.background = getBMIBg(cat);
+    document.getElementById('profile-bmi-num').textContent = calcBMI;
+    document.getElementById('profile-bmi-num').style.color = getBMIColor(calcBMI);
+    document.getElementById('profile-bmi-cat').textContent = cat;
+    document.getElementById('profile-bmi-info').textContent =
+      `Height: ${user.height}m · Weight: ${user.weight}kg · Daily Goal: ${user.dailyCalories} kcal`;
+
+    highlightScale(calcBMI, 'scale-uw', 'scale-nm', 'scale-ow', 'scale-ob');
+  }
+
+  function getBMICategory(bmi) {
+    if (bmi < 18.5) return 'Underweight';
+    if (bmi < 25) return 'Normal';
+    if (bmi < 30) return 'Overweight';
+    return 'Obese';
+  }
+
+  function getBMIBg(cat) {
+    if (cat === 'Underweight') return '#dbeafe';
+    if (cat === 'Normal') return 'var(--green-light)';
+    if (cat === 'Overweight') return '#fef9c3';
+    return 'var(--red-light)';
+  }
+
+  function highlightScale(bmi, uw, nm, ow, ob) {
+    [uw, nm, ow, ob].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.classList.remove('active');
+    });
+    let activeId;
+    if (bmi < 18.5) activeId = uw;
+    else if (bmi < 25) activeId = nm;
+    else if (bmi < 30) activeId = ow;
+    else activeId = ob;
+    const el = document.getElementById(activeId);
+    if (el) el.classList.add('active');
+  }
+
+  function calculateBMI() {
+    const h = parseFloat(document.getElementById('calc-height').value);
+    const w = parseFloat(document.getElementById('calc-weight').value);
+    if (!h || !w || h < 0.5 || h > 3 || w < 1 || w > 500) {
+      showToast('Please enter valid height and weight.', 'error');
+      return;
+    }
+    const bmi = Math.round((w / (h * h)) * 100) / 100;
+    const cat = getBMICategory(bmi);
+    document.getElementById('calc-result').style.display = 'block';
+    document.getElementById('calc-bmi-num').textContent = bmi;
+    document.getElementById('calc-bmi-num').style.color = getBMIColor(bmi);
+    document.getElementById('calc-bmi-cat').textContent = cat;
+    document.getElementById('calc-bmi-cat').parentElement.style.background = getBMIBg(cat);
+    highlightScale(bmi, 'c-scale-uw', 'c-scale-nm', 'c-scale-ow', 'c-scale-ob');
+
+    const advice = document.getElementById('calc-advice');
+    const tips = {
+      'Underweight': { cls: 'alert-warn', msg: '⚠️ You may need to increase calorie intake. Eat more protein-rich and calorie-dense foods.' },
+      'Normal': { cls: 'alert-success', msg: '✅ Great BMI! Maintain your balanced diet and active lifestyle.' },
+      'Overweight': { cls: 'alert-warn', msg: '⚠️ Consider reducing calorie intake and adding 30 min of exercise daily.' },
+      'Obese': { cls: 'alert-error', msg: '🚨 Please consult a doctor. Focus on reducing processed foods and increasing physical activity.' }
+    };
+    const t = tips[cat];
+    advice.className = 'alert ' + t.cls;
+    advice.textContent = t.msg;
+  }
+
+  init();
+</script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Weekly Report</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    .chart-wrap { position: relative; height: 260px; }
+    .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    @media (max-width: 600px) { .stats-row { grid-template-columns: 1fr 1fr; } }
+    .day-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .day-row:last-child { border-bottom: none; }
+    .day-label { width: 90px; font-weight: 600; font-size: 0.88rem; }
+    .day-bar-wrap { flex: 1; background: var(--border); border-radius: 20px; height: 10px; overflow: hidden; }
+    .day-bar { height: 100%; border-radius: 20px; background: var(--green); transition: width 0.8s ease; }
+    .day-bar.over { background: var(--red); }
+    .day-kcal { width: 70px; text-align: right; font-size: 0.88rem; color: var(--muted); font-weight: 600; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-head">
+    <div class="section-title">📊 Weekly Report</div>
+    <span style="color:var(--muted);font-size:0.9rem">Last 7 days</span>
+  </div>
+
+  <!-- Stat boxes -->
+  <div class="stats-row">
+    <div class="stat-box">
+      <div class="stat-value" id="stat-avg">–</div>
+      <div class="stat-label">Avg Daily kcal</div>
+    </div>
+    <div class="stat-box" style="background:#fdecea">
+      <div class="stat-value" style="color:var(--red)" id="stat-unhealthy">–</div>
+      <div class="stat-label">Unhealthy Items</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-value" id="stat-healthy">–</div>
+      <div class="stat-label">Healthy Items</div>
+    </div>
+  </div>
+
+  <div class="grid-2" style="margin-bottom:1.5rem">
+    <!-- Bar chart -->
+    <div class="card">
+      <div class="card-title">📅 Daily Calorie Intake</div>
+      <div class="chart-wrap"><canvas id="calChart"></canvas></div>
+    </div>
+    <!-- Donut chart -->
+    <div class="card">
+      <div class="card-title">🍏 Healthy vs Unhealthy</div>
+      <div class="chart-wrap"><canvas id="pieChart"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Day-by-day breakdown -->
+  <div class="card">
+    <div class="card-title">📋 Day-by-Day Breakdown</div>
+    <div id="day-list"><div class="empty" style="text-align:center;color:var(--muted);padding:2rem">Loading...</div></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  let user = null;
+  let calChart = null, pieChart = null;
+
+  async function init() {
+    user = await checkAuth();
+    if (!user) return;
+    setActiveNav();
+    await loadWeekly();
+  }
+
+  async function loadWeekly() {
+    const res = await fetch('/api/meals/weekly');
+    const data = await res.json();
+
+    const labels = Object.keys(data.dailyCalories).map(formatDate);
+    const calories = Object.values(data.dailyCalories);
+    const limit = user.dailyCalories;
+
+    // Stats
+    document.getElementById('stat-avg').textContent = data.avgCalories;
+    const totalHealthy = Object.values(data.healthyCount).reduce((a, b) => a + Number(b), 0);
+    const totalUnhealthy = Object.values(data.unhealthyCount).reduce((a, b) => a + Number(b), 0);
+    document.getElementById('stat-healthy').textContent = totalHealthy;
+    document.getElementById('stat-unhealthy').textContent = totalUnhealthy;
+
+    // Bar chart
+    if (calChart) calChart.destroy();
+    calChart = new Chart(document.getElementById('calChart').getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Calories',
+          data: calories,
+          backgroundColor: calories.map(c => c > limit ? '#e74c3c88' : '#2ecc7188'),
+          borderColor: calories.map(c => c > limit ? '#e74c3c' : '#2ecc71'),
+          borderWidth: 2,
+          borderRadius: 8
+        }, {
+          label: 'Daily Limit',
+          data: calories.map(() => limit),
+          type: 'line',
+          borderColor: '#f39c12',
+          borderDash: [6, 4],
+          borderWidth: 2,
+          pointRadius: 0,
+          fill: false
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: { y: { beginAtZero: true, grid: { color: '#eee' } }, x: { grid: { display: false } } }
+      }
+    });
+
+    // Pie chart
+    if (pieChart) pieChart.destroy();
+    pieChart = new Chart(document.getElementById('pieChart').getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Healthy', 'Unhealthy'],
+        datasets: [{
+          data: [totalHealthy || 0, totalUnhealthy || 0],
+          backgroundColor: ['#2ecc71', '#e74c3c'],
+          borderWidth: 0,
+          hoverOffset: 8
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '65%'
+      }
+    });
+
+    // Day-by-day list
+    const dayList = document.getElementById('day-list');
+    const entries = Object.entries(data.dailyCalories);
+    if (entries.every(([, v]) => v === 0)) {
+      dayList.innerHTML = '<div style="text-align:center;color:var(--muted);padding:2rem">No data yet for this week.</div>';
+      return;
+    }
+    dayList.innerHTML = entries.map(([date, cal]) => {
+      const pct = Math.min((cal / limit) * 100, 100);
+      const over = cal > limit;
+      return `
+        <div class="day-row">
+          <div class="day-label">${formatDate(date)}</div>
+          <div class="day-bar-wrap">
+            <div class="day-bar ${over ? 'over' : ''}" style="width:${pct}%"></div>
+          </div>
+          <div class="day-kcal">${cal} kcal</div>
+          ${over ? `<span class="badge badge-unhealthy">+${cal - limit}</span>` : ''}
+        </div>
+      `;
+    }).join('');
+  }
+
+  init();
+</script>
+</body>
+</html>

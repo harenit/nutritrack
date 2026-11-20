@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Dashboard</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .greeting { font-family: var(--font-head); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.2rem; }
+    .greeting span { color: var(--green); }
+    .cal-summary { display: flex; align-items: baseline; gap: 8px; margin: 0.5rem 0; }
+    .cal-num { font-family: var(--font-head); font-size: 2.4rem; font-weight: 800; color: var(--green-dark); }
+    .cal-limit { color: var(--muted); font-size: 1rem; }
+    .meal-section { margin-bottom: 1rem; }
+    .meal-section-title {
+      font-size: 0.78rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px;
+      padding: 4px 10px; background: var(--bg); border-radius: 6px; display: inline-block;
+    }
+    .ai-suggestion {
+      background: linear-gradient(135deg, #e8f5e9, #f0fdf4);
+      border-left: 3px solid var(--green);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+      color: var(--green-dark);
+      margin-top: 6px;
+    }
+    .log-form { display: grid; grid-template-columns: 1fr 1fr auto; gap: 10px; align-items: end; }
+    @media (max-width: 600px) { .log-form { grid-template-columns: 1fr; } }
+    .item-result {
+      padding: 12px 16px;
+      border-radius: var(--radius-sm);
+      margin-top: 8px;
+      display: none;
+    }
+    .item-result.healthy { background: var(--green-light); border-left: 4px solid var(--green); }
+    .item-result.unhealthy { background: var(--red-light); border-left: 4px solid var(--red); }
+    .result-name { font-weight: 700; font-size: 1rem; }
+    .result-cal { font-size: 0.9rem; color: var(--muted); }
+    #meals-list .empty { text-align:center; color: var(--muted); padding: 2rem; }
+    .dash-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: 1.5rem; }
+    @media (max-width: 800px) { .dash-grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<!-- NAV -->
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-head">
+    <div>
+      <div class="greeting">Hello, <span id="user-name">...</span> 👋</div>
+      <p style="color:var(--muted);font-size:0.9rem" id="today-date"></p>
+    </div>
+    <div style="text-align:right">
+      <div style="font-size:0.8rem;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em">Daily Goal</div>
+      <div style="font-family:var(--font-head);font-size:1.4rem;font-weight:800;color:var(--green-dark)" id="daily-limit">– kcal</div>
+    </div>
+  </div>
+
+  <div class="dash-grid">
+    <!-- LEFT: Log Meal -->
+    <div>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">➕ Log a Meal Item</div>
+        <div class="log-form">
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Meal Type</label>
+            <select class="form-select" id="meal-type">
+              <option value="breakfast">🌅 Breakfast</option>
+              <option value="lunch">☀️ Lunch</option>
+              <option value="dinner">🌙 Dinner</option>
+              <option value="snack">🍎 Snack</option>
+            </select>
+          </div>
+          <div class="form-group" style="margin:0">
+            <label class="form-label">Food Item</label>
+            <input class="form-input" id="item-name" type="text" placeholder="e.g. rice, pizza, oats"/>
+          </div>
+          <button class="btn btn-primary" onclick="logItem()" id="log-btn">Add</button>
+        </div>
+        <div id="item-result" class="item-result">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div class="result-name" id="res-name"></div>
+              <div class="result-cal" id="res-cal"></div>
+            </div>
+            <span class="badge" id="res-badge"></span>
+          </div>
+          <div id="res-suggestion" class="ai-suggestion" style="display:none"></div>
+        </div>
+      </div>
+
+      <!-- Calorie summary -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">🔥 Today's Calories</div>
+        <div class="cal-summary">
+          <div class="cal-num" id="cal-today">0</div>
+          <div class="cal-limit">/ <span id="cal-limit-small">–</span> kcal</div>
+        </div>
+        <div class="cal-bar-wrap">
+          <div class="cal-bar" id="cal-bar" style="width:0%"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.82rem;color:var(--muted);margin-top:6px">
+          <span id="cal-status">Tracking...</span>
+          <span id="cal-remain"></span>
+        </div>
+        <div id="workout-tip" class="workout-tip" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Today's meals -->
+    <div class="card">
+      <div class="card-title">🍽️ Today's Meals</div>
+      <div id="meals-list"><div class="empty">No meals logged yet today.</div></div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  let user = null;
+
+  async function init() {
+    user = await checkAuth();
+    if (!user) return;
+    document.getElementById('user-name').textContent = user.name;
+    document.getElementById('daily-limit').textContent = user.dailyCalories + ' kcal';
+    document.getElementById('cal-limit-small').textContent = user.dailyCalories;
+    document.getElementById('today-date').textContent = new Date().toLocaleDateString('en-IN', {
+      weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
+    });
+    setActiveNav();
+    await loadToday();
+  }
+
+  async function loadToday() {
+    const res = await fetch('/api/meals/today');
+    const data = await res.json();
+    renderMeals(data.entries || []);
+    updateCalBar(data.totalCalories || 0);
+  }
+
+  function renderMeals(entries) {
+    const list = document.getElementById('meals-list');
+    if (!entries.length) {
+      list.innerHTML = '<div class="empty">No meals logged yet today.</div>';
+      return;
+    }
+    // Group by meal type
+    const groups = {};
+    entries.forEach(e => {
+      if (!groups[e.mealType]) groups[e.mealType] = [];
+      groups[e.mealType].push(e);
+    });
+    const mealIcons = { breakfast: '🌅', lunch: '☀️', dinner: '🌙', snack: '🍎' };
+    list.innerHTML = Object.entries(groups).map(([type, items]) => `
+      <div class="meal-section">
+        <div class="meal-section-title">${mealIcons[type] || '🍴'} ${type}</div>
+        ${items.map(e => `
+          <div class="meal-item">
+            <div>
+              <div class="meal-item-name">${e.itemName}</div>
+              ${e.aiSuggestion ? `<div class="ai-suggestion" style="margin-top:4px;font-size:0.8rem">💡 ${e.aiSuggestion}</div>` : ''}
+            </div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <span class="meal-item-cal">${e.calories} kcal</span>
+              <span class="badge badge-${e.itemType === 'Healthy' ? 'healthy' : 'unhealthy'}">${e.itemType}</span>
+              <button class="btn btn-sm btn-danger" onclick="deleteMeal(${e.id})">✕</button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+  }
+
+  function updateCalBar(total) {
+    document.getElementById('cal-today').textContent = total;
+    const limit = user.dailyCalories;
+    const pct = Math.min((total / limit) * 100, 100);
+    const bar = document.getElementById('cal-bar');
+    bar.style.width = pct + '%';
+    const over = total > limit;
+    bar.classList.toggle('over', over);
+
+    if (over) {
+      const excess = total - limit;
+      document.getElementById('cal-status').textContent = `⚠️ Over by ${excess} kcal`;
+      document.getElementById('cal-remain').textContent = '';
+      const tip = document.getElementById('workout-tip');
+      tip.style.display = 'flex';
+      tip.textContent = getWorkoutTip(excess);
+    } else {
+      document.getElementById('cal-status').textContent = '✅ Within limit';
+      document.getElementById('cal-remain').textContent = `${limit - total} kcal remaining`;
+      document.getElementById('workout-tip').style.display = 'none';
+    }
+  }
+
+  async function logItem() {
+    const mealType = document.getElementById('meal-type').value;
+    const itemName = document.getElementById('item-name').value.trim();
+    if (!itemName) { showToast('Enter a food item name', 'error'); return; }
+
+    const btn = document.getElementById('log-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>';
+
+    const res = await fetch('/api/meals/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mealType, itemName })
+    });
+    const data = await res.json();
+    btn.disabled = false;
+    btn.textContent = 'Add';
+
+    const resultDiv = document.getElementById('item-result');
+    if (!data.found) {
+      showToast(data.message || 'Item not found', 'error');
+      resultDiv.style.display = 'none';
+      return;
+    }
+
+    // Show result
+    resultDiv.style.display = 'block';
+    resultDiv.className = 'item-result ' + (data.type === 'Healthy' ? 'healthy' : 'unhealthy');
+    document.getElementById('res-name').textContent = data.itemName;
+    document.getElementById('res-cal').textContent = data.calories + ' kcal';
+    const badge = document.getElementById('res-badge');
+    badge.textContent = data.type;
+    badge.className = 'badge badge-' + (data.type === 'Healthy' ? 'healthy' : 'unhealthy');
+    const sug = document.getElementById('res-suggestion');
+    if (data.suggestion) {
+      sug.style.display = 'block';
+      sug.innerHTML = '💡 <strong>AI Tip:</strong> ' + data.suggestion;
+    } else {
+      sug.style.display = 'none';
+    }
+
+    document.getElementById('item-name').value = '';
+    showToast('Logged ' + data.itemName + '!', 'success');
+    await loadToday();
+  }
+
+  async function deleteMeal(id) {
+    if (!confirm('Remove this meal entry?')) return;
+    await fetch('/api/meals/' + id, { method: 'DELETE' });
+    showToast('Removed', 'success');
+    await loadToday();
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && document.activeElement.id === 'item-name') logItem();
+  });
+
+  init();
+</script>
+</body>
+</html>

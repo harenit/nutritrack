@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Community</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .feed-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.5rem; }
+    .post-card {
+      background: white;
+      border-radius: var(--radius);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      transition: transform 0.2s;
+    }
+    .post-card:hover { transform: translateY(-4px); }
+    .post-img { width: 100%; height: 200px; object-fit: cover; background: var(--green-light); display: flex; align-items: center; justify-content: center; font-size: 3rem; }
+    .post-img img { width: 100%; height: 100%; object-fit: cover; }
+    .post-body { padding: 1rem; }
+    .post-item { font-family: var(--font-head); font-size: 1rem; font-weight: 700; }
+    .post-caption { font-size: 0.9rem; color: var(--text); margin: 6px 0; }
+    .post-meta { font-size: 0.78rem; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+    .empty-feed { text-align:center; padding: 4rem 2rem; color: var(--muted); }
+    .empty-feed .icon { font-size: 3rem; margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-head" style="margin-bottom:1.5rem">
+    <div class="section-title">🌍 Community Feed</div>
+    <a href="/calendar" class="btn btn-outline btn-sm">📸 Share a Meal</a>
+  </div>
+  <p style="color:var(--muted);margin-bottom:1.5rem;font-size:0.9rem">Meals shared by the community. Share yours from the Calendar page!</p>
+
+  <div id="feed" class="feed-grid">
+    <div class="empty-feed">
+      <div class="icon">🌿</div>
+      <div>Loading community posts...</div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  async function init() {
+    const user = await checkAuth();
+    if (!user) return;
+    setActiveNav();
+    await loadFeed();
+  }
+
+  async function loadFeed() {
+    const res = await fetch('/api/meals/community');
+    const posts = await res.json();
+    const feed = document.getElementById('feed');
+
+    if (!posts.length) {
+      feed.innerHTML = `
+        <div class="empty-feed" style="grid-column:1/-1">
+          <div class="icon">🌱</div>
+          <div style="font-weight:600;margin-bottom:0.5rem">No posts yet!</div>
+          <div>Be the first to share a meal memory.</div>
+          <a href="/calendar" class="btn btn-primary" style="margin-top:1rem">📸 Share a Meal</a>
+        </div>`;
+      return;
+    }
+
+    feed.innerHTML = posts.map(p => `
+      <div class="post-card">
+        <div class="post-img">
+          ${p.photoPath
+            ? `<img src="${p.photoPath}" alt="${p.itemName}" />`
+            : getMealEmoji(p.itemType)}
+        </div>
+        <div class="post-body">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start">
+            <div class="post-item">${p.itemName}</div>
+            <span class="badge badge-${p.itemType === 'Healthy' ? 'healthy' : 'unhealthy'}">${p.itemType}</span>
+          </div>
+          ${p.caption ? `<div class="post-caption">"${p.caption}"</div>` : ''}
+          <div class="post-meta">
+            <span>🔥 ${p.calories} kcal</span>
+            <span>·</span>
+            <span>📅 ${formatDate(p.date)}</span>
+          </div>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function getMealEmoji(type) {
+    return type === 'Healthy' ? '🥗' : '🍕';
+  }
+
+  init();
+</script>
+</body>
+</html>

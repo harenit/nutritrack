@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Calendar</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .cal-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 4px;
+      margin-bottom: 1.5rem;
+    }
+    .cal-header { text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--muted); padding: 6px 0; text-transform: uppercase; }
+    .cal-day {
+      aspect-ratio: 1;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 8px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      border: 2px solid transparent;
+    }
+    .cal-day.empty { background: transparent; cursor: default; }
+    .cal-day.normal { background: white; color: var(--text); }
+    .cal-day.normal:hover { border-color: var(--green); }
+    .cal-day.has-meals { background: var(--green-light); color: var(--green-dark); font-weight: 700; }
+    .cal-day.has-meals::after {
+      content: '';
+      position: absolute;
+      bottom: 4px;
+      width: 5px; height: 5px;
+      background: var(--green);
+      border-radius: 50%;
+    }
+    .cal-day.today { border-color: var(--green); box-shadow: 0 0 0 3px rgba(46,204,113,0.2); }
+    .cal-day.selected { background: var(--green); color: white; }
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+    .cal-month { font-family: var(--font-head); font-size: 1.2rem; font-weight: 700; }
+    .cal-nav-btn { background: white; border: 2px solid var(--border); border-radius: 8px; padding: 6px 14px; cursor: pointer; font-size: 1rem; }
+    .cal-nav-btn:hover { border-color: var(--green); }
+
+    /* Meal detail panel */
+    .detail-panel { display: none; }
+    .detail-panel.visible { display: block; }
+    .memory-card {
+      background: white;
+      border-radius: var(--radius);
+      padding: 1.2rem;
+      border: 1px solid var(--border);
+      margin-bottom: 1rem;
+    }
+    .memory-photo {
+      width: 100%;
+      max-height: 220px;
+      object-fit: cover;
+      border-radius: 10px;
+      margin-bottom: 0.8rem;
+    }
+    .upload-area {
+      border: 2px dashed var(--border);
+      border-radius: 10px;
+      padding: 1.2rem;
+      text-align: center;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 0.9rem;
+      transition: all 0.2s;
+      margin-bottom: 0.8rem;
+    }
+    .upload-area:hover { border-color: var(--green); color: var(--green-dark); }
+    .share-toggle { display: flex; align-items: center; gap: 10px; margin: 0.5rem 0; }
+    .toggle-switch {
+      position: relative;
+      width: 44px; height: 24px;
+    }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: var(--border); border-radius: 24px;
+      cursor: pointer; transition: 0.3s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute;
+      height: 18px; width: 18px;
+      left: 3px; top: 3px;
+      background: white; border-radius: 50%;
+      transition: 0.3s;
+    }
+    input:checked + .toggle-slider { background: var(--green); }
+    input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+    .day-entry { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--border); }
+    .day-entry:last-child { border-bottom: none; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-title" style="margin-bottom:1.5rem">📅 Meal Calendar & Memories</div>
+
+  <div class="grid-2">
+    <!-- Calendar -->
+    <div class="card">
+      <div class="cal-nav">
+        <button class="cal-nav-btn" onclick="changeMonth(-1)">◀</button>
+        <div class="cal-month" id="cal-month-label">–</div>
+        <button class="cal-nav-btn" onclick="changeMonth(1)">▶</button>
+      </div>
+      <div class="cal-grid" id="cal-grid">
+        <div class="cal-header">Sun</div>
+        <div class="cal-header">Mon</div>
+        <div class="cal-header">Tue</div>
+        <div class="cal-header">Wed</div>
+        <div class="cal-header">Thu</div>
+        <div class="cal-header">Fri</div>
+        <div class="cal-header">Sat</div>
+        <!-- Days rendered by JS -->
+      </div>
+      <p style="font-size:0.82rem;color:var(--muted);text-align:center">🟢 = has meals logged</p>
+    </div>
+
+    <!-- Detail panel -->
+    <div>
+      <div id="detail-placeholder" class="card" style="text-align:center;padding:3rem;color:var(--muted)">
+        <div style="font-size:2rem;margin-bottom:0.5rem">👆</div>
+        <div>Select a date to see meals & create memories</div>
+      </div>
+
+      <div class="detail-panel" id="detail-panel">
+        <div class="card" style="margin-bottom:1rem">
+          <div class="card-title" id="detail-date-title">–</div>
+          <div id="detail-meals-list"></div>
+        </div>
+
+        <!-- Memory post for selected entry -->
+        <div class="card" id="memory-panel" style="display:none">
+          <div class="card-title">📸 Create Memory</div>
+          <p style="font-size:0.85rem;color:var(--muted);margin-bottom:1rem">Attach a photo and caption to a meal entry</p>
+
+          <div class="form-group">
+            <label class="form-label">Select Meal Entry</label>
+            <select class="form-select" id="memory-entry-select"></select>
+          </div>
+
+          <img id="memory-preview" class="memory-photo" src="" style="display:none" alt="preview"/>
+
+          <div class="upload-area" onclick="document.getElementById('photo-upload').click()">
+            📷 Click to upload meal photo
+            <input type="file" id="photo-upload" accept="image/*" style="display:none" onchange="previewPhoto(this)"/>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Caption</label>
+            <input class="form-input" id="memory-caption" placeholder="What was special about this meal?"/>
+          </div>
+
+          <div class="share-toggle">
+            <label class="toggle-switch">
+              <input type="checkbox" id="share-toggle"/>
+              <span class="toggle-slider"></span>
+            </label>
+            <span style="font-size:0.9rem;font-weight:600">Share to Community 🌍</span>
+          </div>
+
+          <button class="btn btn-primary" style="width:100%;margin-top:0.5rem" onclick="saveMemory()">
+            💾 Save Memory
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  let user = null;
+  let mealDates = new Set();
+  let currentYear, currentMonth;
+  let selectedDate = null;
+
+  async function init() {
+    user = await checkAuth();
+    if (!user) return;
+    setActiveNav();
+    const now = new Date();
+    currentYear = now.getFullYear();
+    currentMonth = now.getMonth();
+    const datesRes = await fetch('/api/meals/dates');
+    const dates = await datesRes.json();
+    dates.forEach(d => mealDates.add(d));
+    renderCalendar();
+  }
+
+  function renderCalendar() {
+    const label = new Date(currentYear, currentMonth).toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+    document.getElementById('cal-month-label').textContent = label;
+
+    const firstDay = new Date(currentYear, currentMonth, 1).getDay();
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+    const today = new Date().toISOString().split('T')[0];
+
+    const grid = document.getElementById('cal-grid');
+    // Keep headers
+    const headers = Array.from(grid.querySelectorAll('.cal-header'));
+    grid.innerHTML = '';
+    headers.forEach(h => grid.appendChild(h));
+
+    // Empty slots
+    for (let i = 0; i < firstDay; i++) {
+      const d = document.createElement('div');
+      d.className = 'cal-day empty';
+      grid.appendChild(d);
+    }
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      const d = document.createElement('div');
+      d.textContent = day;
+      d.className = 'cal-day normal';
+      if (mealDates.has(dateStr)) d.classList.add('has-meals');
+      if (dateStr === today) d.classList.add('today');
+      if (dateStr === selectedDate) d.classList.add('selected');
+      d.onclick = () => selectDate(dateStr, d);
+      grid.appendChild(d);
+    }
+  }
+
+  function changeMonth(dir) {
+    currentMonth += dir;
+    if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+    if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+    renderCalendar();
+  }
+
+  async function selectDate(dateStr, el) {
+    selectedDate = dateStr;
+    // Highlight
+    document.querySelectorAll('.cal-day.selected').forEach(d => d.classList.remove('selected'));
+    el.classList.add('selected');
+
+    const res = await fetch('/api/meals/date/' + dateStr);
+    const meals = await res.json();
+
+    document.getElementById('detail-placeholder').style.display = 'none';
+    const panel = document.getElementById('detail-panel');
+    panel.classList.add('visible');
+    document.getElementById('detail-date-title').textContent = '🍽️ ' + formatDate(dateStr);
+
+    const list = document.getElementById('detail-meals-list');
+    if (!meals.length) {
+      list.innerHTML = '<div style="color:var(--muted);text-align:center;padding:1rem">No meals on this day.</div>';
+      document.getElementById('memory-panel').style.display = 'none';
+      return;
+    }
+
+    list.innerHTML = meals.map(m => `
+      <div class="day-entry">
+        <div>
+          <div style="font-weight:600">${m.itemName}</div>
+          <div style="font-size:0.8rem;color:var(--muted)">${m.mealType} · ${m.calories} kcal</div>
+          ${m.caption ? `<div style="font-size:0.82rem;color:var(--green-dark);margin-top:2px">💬 ${m.caption}</div>` : ''}
+          ${m.photoPath ? `<img src="${m.photoPath}" style="width:80px;height:60px;object-fit:cover;border-radius:6px;margin-top:4px" />` : ''}
+        </div>
+        <span class="badge badge-${m.itemType === 'Healthy' ? 'healthy' : 'unhealthy'}">${m.itemType}</span>
+      </div>
+    `).join('');
+
+    // Populate memory select
+    const select = document.getElementById('memory-entry-select');
+    select.innerHTML = meals.map(m => `<option value="${m.id}">${m.itemName} (${m.mealType})</option>`).join('');
+    document.getElementById('memory-panel').style.display = 'block';
+  }
+
+  function previewPhoto(input) {
+    if (!input.files[0]) return;
+    const url = URL.createObjectURL(input.files[0]);
+    const preview = document.getElementById('memory-preview');
+    preview.src = url;
+    preview.style.display = 'block';
+  }
+
+  async function saveMemory() {
+    const entryId = document.getElementById('memory-entry-select').value;
+    const caption = document.getElementById('memory-caption').value;
+    const shared = document.getElementById('share-toggle').checked;
+    const photo = document.getElementById('photo-upload').files[0];
+
+    const form = new FormData();
+    form.append('caption', caption);
+    form.append('shared', shared);
+    if (photo) form.append('photo', photo);
+
+    const res = await fetch(`/api/meals/${entryId}/post`, {
+      method: 'PUT',
+      body: form
+    });
+    if (res.ok) {
+      showToast('Memory saved' + (shared ? ' & shared to community!' : '!'), 'success');
+      await selectDate(selectedDate, document.querySelector('.cal-day.selected'));
+    } else {
+      showToast('Failed to save', 'error');
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>

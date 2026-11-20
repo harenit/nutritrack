@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>NutriTrack – Profile</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+  <style>
+    .avatar {
+      width: 80px; height: 80px;
+      border-radius: 50%;
+      background: var(--green);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem;
+      font-family: var(--font-head);
+      font-weight: 800;
+      color: white;
+      margin-bottom: 1rem;
+    }
+    .profile-header { display: flex; align-items: center; gap: 1.5rem; margin-bottom: 2rem; }
+    .profile-name { font-family: var(--font-head); font-size: 1.6rem; font-weight: 800; }
+    .profile-username { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+    @media (max-width: 500px) { .form-row { grid-template-columns: 1fr; } }
+    .activity-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+    .act-btn {
+      padding: 8px 10px; border: 2px solid var(--border); border-radius: 8px;
+      background: white; cursor: pointer; font-family: var(--font-body);
+      font-size: 0.82rem; font-weight: 500; color: var(--muted);
+      transition: all 0.2s; text-align: center;
+    }
+    .act-btn.selected { border-color: var(--green); background: var(--green-light); color: var(--green-dark); }
+    .danger-zone { border: 2px solid var(--red); border-radius: var(--radius); padding: 1.5rem; margin-top: 1.5rem; }
+    .danger-title { font-family: var(--font-head); font-size: 1rem; font-weight: 700; color: var(--red); margin-bottom: 0.5rem; }
+  </style>
+</head>
+<body>
+<nav class="nav">
+  <a href="/dashboard" class="nav-logo">Nutri<span>Track</span></a>
+  <div class="nav-links">
+    <a href="/dashboard" class="nav-link">🏠 Dashboard</a>
+    <a href="/weekly" class="nav-link">📊 Weekly</a>
+    <a href="/calendar" class="nav-link">📅 Calendar</a>
+    <a href="/community" class="nav-link">🌍 Community</a>
+    <a href="/bmi" class="nav-link">⚖️ BMI</a>
+    <a href="/profile" class="nav-link">👤 Profile</a>
+    <a href="#" class="nav-link danger" onclick="logout()">Logout</a>
+  </div>
+</nav>
+
+<div class="page">
+  <div class="section-title" style="margin-bottom:1.5rem">👤 My Profile</div>
+
+  <div class="grid-2">
+    <div>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="profile-header">
+          <div class="avatar" id="profile-avatar">?</div>
+          <div>
+            <div class="profile-name" id="profile-name">–</div>
+            <div class="profile-username" id="profile-username">@–</div>
+            <div style="margin-top:8px;display:flex;gap:8px">
+              <span class="badge badge-healthy" id="profile-bmi-badge">BMI –</span>
+              <span class="badge" style="background:#e8f0fe;color:#1a73e8" id="profile-cal-badge">– kcal/day</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">✏️ Update Profile</div>
+        <div id="update-msg"></div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Full Name</label>
+            <input class="form-input" id="upd-name" type="text"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Age</label>
+            <input class="form-input" id="upd-age" type="number" min="1" max="120"/>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Height (m)</label>
+            <input class="form-input" id="upd-height" type="number" step="0.01"/>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Weight (kg)</label>
+            <input class="form-input" id="upd-weight" type="number" step="0.1"/>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Gender</label>
+          <select class="form-select" id="upd-gender">
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Activity Level</label>
+          <div class="activity-grid">
+            <button class="act-btn" data-val="1.2" onclick="selectAct(this)">🛋️ Sedentary</button>
+            <button class="act-btn" data-val="1.375" onclick="selectAct(this)">🚶 Lightly Active</button>
+            <button class="act-btn" data-val="1.55" onclick="selectAct(this)">🏃 Moderate</button>
+            <button class="act-btn" data-val="1.725" onclick="selectAct(this)">💪 Very Active</button>
+            <button class="act-btn" style="grid-column:1/-1" data-val="1.9" onclick="selectAct(this)">🏋️ Extra Active</button>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="updateProfile()">Save Changes</button>
+      </div>
+    </div>
+
+    <!-- Password + Danger -->
+    <div>
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-title">🔐 Change Password</div>
+        <div id="pwd-msg"></div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input class="form-input" id="new-pwd" type="password" placeholder="Enter new password"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input class="form-input" id="confirm-pwd" type="password" placeholder="Repeat new password"/>
+        </div>
+        <button class="btn btn-outline" style="width:100%" onclick="changePassword()">Update Password</button>
+      </div>
+
+      <div class="danger-zone">
+        <div class="danger-title">⚠️ Danger Zone</div>
+        <p style="font-size:0.88rem;color:var(--muted);margin-bottom:1rem">These actions are permanent and cannot be undone.</p>
+        <button class="btn btn-outline" style="width:100%;margin-bottom:0.7rem" onclick="logout()">
+          🔓 Logout
+        </button>
+        <button class="btn btn-danger" style="width:100%" onclick="deleteAccount()">
+          🗑️ Delete My Account
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<script src="/js/utils.js"></script>
+<script>
+  let user = null;
+  let selectedMultiplier = 1.2;
+
+  async function init() {
+    user = await checkAuth();
+    if (!user) return;
+    setActiveNav();
+    populateProfile(user);
+  }
+
+  function populateProfile(u) {
+    const bmi = Math.round((u.weight / (u.height * u.height)) * 100) / 100;
+    const cal = Math.round(
+      ((u.gender === 'male'
+        ? (10 * u.weight) + (6.25 * u.height * 100) - (5 * u.age) + 5
+        : (10 * u.weight) + (6.25 * u.height * 100) - (5 * u.age) - 161)
+      ) * u.activityMultiplier
+    );
+
+    document.getElementById('profile-avatar').textContent = u.name.charAt(0).toUpperCase();
+    document.getElementById('profile-name').textContent = u.name;
+    document.getElementById('profile-username').textContent = '@' + u.username;
+    document.getElementById('profile-bmi-badge').textContent = 'BMI ' + bmi;
+    document.getElementById('profile-cal-badge').textContent = cal + ' kcal/day';
+
+    document.getElementById('upd-name').value = u.name;
+    document.getElementById('upd-age').value = u.age;
+    document.getElementById('upd-height').value = u.height;
+    document.getElementById('upd-weight').value = u.weight;
+    document.getElementById('upd-gender').value = u.gender;
+
+    selectedMultiplier = u.activityMultiplier;
+    document.querySelectorAll('.act-btn').forEach(b => {
+      b.classList.toggle('selected', parseFloat(b.dataset.val) === u.activityMultiplier);
+    });
+  }
+
+  function selectAct(btn) {
+    document.querySelectorAll('.act-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+    selectedMultiplier = parseFloat(btn.dataset.val);
+  }
+
+  async function updateProfile() {
+    const updated = {
+      ...user,
+      name: document.getElementById('upd-name').value.trim(),
+      age: parseInt(document.getElementById('upd-age').value),
+      height: parseFloat(document.getElementById('upd-height').value),
+      weight: parseFloat(document.getElementById('upd-weight').value),
+      gender: document.getElementById('upd-gender').value,
+      activityMultiplier: selectedMultiplier
+    };
+    const res = await fetch('/api/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(updated)
+    });
+    if (res.ok) {
+      user = await res.json();
+      populateProfile(user);
+      showToast('Profile updated!', 'success');
+      document.getElementById('update-msg').innerHTML = '<div class="alert alert-success">Changes saved successfully.</div>';
+      setTimeout(() => document.getElementById('update-msg').innerHTML = '', 3000);
+    } else {
+      showToast('Update failed', 'error');
+    }
+  }
+
+  async function changePassword() {
+    const np = document.getElementById('new-pwd').value;
+    const cp = document.getElementById('confirm-pwd').value;
+    const msg = document.getElementById('pwd-msg');
+    if (!np || np.length < 4) {
+      msg.innerHTML = '<div class="alert alert-error">Password must be at least 4 characters.</div>';
+      return;
+    }
+    if (np !== cp) {
+      msg.innerHTML = '<div class="alert alert-error">Passwords do not match.</div>';
+      return;
+    }
+    const res = await fetch('/api/profile/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: np })
+    });
+    if (res.ok) {
+      msg.innerHTML = '<div class="alert alert-success">Password updated!</div>';
+      document.getElementById('new-pwd').value = '';
+      document.getElementById('confirm-pwd').value = '';
+      setTimeout(() => msg.innerHTML = '', 3000);
+    } else {
+      msg.innerHTML = '<div class="alert alert-error">Failed to update password.</div>';
+    }
+  }
+
+  init();
+</script>
+</body>
+</html>
